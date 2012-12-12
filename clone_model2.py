@@ -15,6 +15,7 @@ ee_mean_death = 10
 isc_mean_death = 20
 isc_mean_divide = 2
 isc_prob_sym_divide =0.02
+upd_level =100
 
 #create 2D area of cells with dimensions sizeXsize
 #seed each position with a cell identity at the ratio specified
@@ -35,12 +36,16 @@ for d1 in range(size):
 	        	non_clone_dict["isc"]+=1
 #seed a map that will keep track of the age of each cell start all at zero for now 
 age_area = [ [ 0 for i in range(size) ] for j in range(size) ]
+
+#seed a map that will keep track of the level of upd at each cell position zero to start 
+upd_area = [ [ 0 for i in range(size) ] for j in range(size) ]
+#seed a map that will keep track of the level of dpp at each cell position zero to start 
+dpp_area = [ [ 0 for i in range(size) ] for j in range(size) ]
        	
 # find any cell will return an list of [x y] positions for the cell_type searched
 def find_any_cell(area, cell_type):
 	pos = []
 	for index, item in enumerate(area):
-		print index, item
 		for val, c in enumerate(item):
 			if c == cell_type:
 				pos += [index, val]
@@ -63,7 +68,7 @@ for x in range(0,len(isc_pos)):
 		if i < 2:
 			isc_list.append(isc_pos[x][i])
 		else:
-			isc_list.append(0)
+			isc_list.append(3)
 isc_div_list = [isc_list[i:i+3] for i in range(0,len(isc_list),3)]			
 
 #remove cell from map, dict and age map
@@ -98,15 +103,70 @@ def add_cell(x,y, area, age_area, cell_type):
 	area.insert(x,new_row)
 	age_area.insert(x,new_row_age)		
 	if cell_type == 'c_isc' or 'c_ec' or 'c_ee' or 'c_eb':
-		clone_dict[str(cell_lost)]+=1
+		clone_dict["c_eb"]+=1
 	else:
-		non_clone_dict[str(cell_lost)]+=1	
+		non_clone_dict[str"eb"]+=1	
+
+#neigbor will return True if the cell is a neighbor of (x,y) Eight cells are neighbors
+def neighbor(x,y,n_x,n_y):
+	#acceptable neighbor values
+	x_true_list = [x,x+1,x-1]
+	y_true_list = [y,y+1,y-1]
+	#exclude the starting position
+	if n_x != x or n_y != y:
+		return n_x in x_true_list and n_y in y_true_list
+	else:
+		return False
+
+# returns not actual distance but a value corresponding to how many shells (8-cell rings) away the target position is
+def distance_value(x,y,t_x, t_y):
+	dist = abs(x-t_x)+abs(y-t_y)
+	print dist
+	if dist == 1 or dist == 0:
+		return 1
+	else:	
+		for i in range(1,dist+1):
+			if neighbor(x,y,t_x, t_y):
+				return 1
+			elif i == dist and (x == t_x or y == t_y):
+				return i-1
+			elif i == dist and (x != t_x and y != t_y):
+				return i-2
+
+			
+#upd_diffuse function will take a value from a position and add some portion of that value to all squares 
+#will be run each death and be additive, rate of diffusion to be determined 
+
+
+#create an array of all zeros for each cell to use for search
+area_done = [ [ 0 for i in range(len(upd_area)) ] for j in range(len(upd_area[i])) ]	
+
+#will iterate over area_done marking of searched points and assigning upd levels from point of origin (o_x, o_y)
+#initialize with x = o_x and y = o_y will assign 1/distance^2 value, distance being 8-cell shells 
+def diffuse_from_point(x, y, o_x, o_y, upd_area, upd_level, area_done):	
+    if area_done[x][y] == 0:
+		upd_area[x][y] = upd_level/distance(o_x, o_y, x, y)**2
+    elif area_done[x][y] == 1:
+		return False
+    # mark as visited
+    area_done[x][y] = 1
+
+    # explore neighbors clockwise starting by the one on the right
+    if ((x < len(area_done)-1 and diffuse_from_point(x+1, y,o_x, o_y, upd_area, upd_level, area_done))
+        or (y > 0 and diffuse_from_point(x, y-1,o_x, o_y, upd_area, upd_level, area_done))
+        or (x > 0 and diffuse_from_point(x-1, y,o_x, o_y, upd_area, upd_level, area_done))
+        or (y < len(area_done)-1 and diffuse_from_point(x, y+1,o_x, o_y, upd_area, upd_level, area_done))):
+        return True
+    return False
+    
 
 
 #death function
 #removes cell if the age is greater than a number randomly generated from the normal distribution
 #each cell type has it's own mean age of death
-def cell_death(x,y, age_area, area):
+def cell_death(x,y, age_area, upd_area, dpp_area, area):
+
+			
 	new_row = area[x]
 	cell_type = new_row[y]
 	if cell_type == 'ec' or 'c_ec':
@@ -147,17 +207,25 @@ def choose_direction(x,y):
 # divide function will check isc at (x,y) if the randomly generated value of normal distribution is 
 #than time last divided add a new cell 'eb' or 'c_eb' depending on type of isc
 def isc_divide(x,y, isc_div_list, area):
-	if area[x][y] != 'isc' or 'c_isc':
-		return "this is not an isc"
-		break
-	since_last_div = [x[2] for x in isc_div_list if x[0] == x and x[1] == y]
-	direction = choose_direction(x,y)
-	if area[x][y] == 'isc':
-		if random.normalvariate(isc_mean_divide,2) < since_last_div:
-			add_cell(direction[0],direction[1], age_area, "eb")
-	elif area[x][y] == 'c_isc':		
-		if random.normalvariate(isc_mean_divide,2) < since_last_div:	
-			add_cell(direction[0],direction[1], age_area, "c_eb")	
+	rand_sym_div = random.random()
+	age_to_divide = random.normalvariate(isc_mean_divide,2)
+	if area[x][y] != 'isc' and area[x][y] != 'c_isc':
+		print "this is not an isc"
+	else:
+		for i in isc_div_list:
+			if i[0] == x and i[1] == y:
+				since_last_div = i[2]
+		direction = choose_direction(x,y)
+		if area[x][y] == 'isc':
+			if age_to_divide < since_last_div and rand_sym_div >= isc_prob_sym_divide:
+				add_cell(direction[0],direction[1],area, age_area, "eb")
+			elif age_to_divide < since_last_div and rand_sym_div <= isc_prob_sym_divide
+				add_cell(direction[0],direction[1],area, age_area, "isc")
+		elif area[x][y] == 'c_isc':		
+			if age_to_divide < since_last_div and rand_sym_div >= isc_prob_sym_divide:	
+				add_cell(direction[0],direction[1], area, age_area, "c_eb")
+			elif age_to_divide < since_last_div and rand_sym_div <= isc_prob_sym_divide
+				add_cell(direction[0],direction[1],area, age_area, "c_isc")
 	
 							
 
