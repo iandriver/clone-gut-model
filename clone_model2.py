@@ -22,17 +22,17 @@ isc_prob_sym_divide =0.02
 #no isc's can be created on edges
 area= [ [ 0 for i in range(size) ] for j in range(size) ]
 for d1 in range(size):
-    for d2 in range(size):
-      prob = random.random()
-    	if prob <= fraction_ec:
-        	area[d1][d2]= 'ec'
-        	non_clone_dict["ec"]+=1
-        elif prob>fraction_ec and prob<=(fraction_ec+fraction_ee):
-        	area[d1][d2]= 'ee'
-        	non_clone_dict["ee"]+=1
-        elif d1 != 0 or d1 != size-1 or d2 !=0 or d2!= size-1:
-        	area[d1][d2]= 'isc'	
-        	non_clone_dict["isc"]+=1
+	for d2 in range(size):
+		prob = random.random()
+	    	if prob <= fraction_ec:
+	        	area[d1][d2]= 'ec'
+	        	non_clone_dict["ec"]+=1
+	        elif prob>fraction_ec and prob<=(fraction_ec+fraction_ee):
+	        	area[d1][d2]= 'ee'
+	        	non_clone_dict["ee"]+=1
+	        elif d1 != 0 or d1 != size-1 or d2 !=0 or d2!= size-1:
+	        	area[d1][d2]= 'isc'	
+	        	non_clone_dict["isc"]+=1
 #seed a map that will keep track of the age of each cell start all at zero for now 
 age_area = [ [ 0 for i in range(size) ] for j in range(size) ]
        	
@@ -67,7 +67,7 @@ for x in range(0,len(isc_pos)):
 isc_div_list = [isc_list[i:i+3] for i in range(0,len(isc_list),3)]			
 
 #remove cell from map, dict and age map
-def remove_cell(x,y, age_area, area):
+def remove_cell(x,y, age_area, isc_div_list, area):
 	new_row = area[x]
 	new_row_age = age_area[x]
 	cell_lost = new_row[y]
@@ -80,12 +80,14 @@ def remove_cell(x,y, age_area, area):
 	if cell_lost == 'isc' or 'ec' or 'ee':
 		non_clone_dict[str(cell_lost)]-=1
 		if cell_lost == 'isc'
-			search = 'c'
-any(e[1] == search for e in data)
+			for i in isc_div_list:
+				if i[0]==x and i[1] ==y:
+					del isc_div_list[i]
 	else:
 		clone_dict[str(cell_lost)]-=1	
 	
 #add cell of cell_type at position (x,y)
+#set the age of that cell to zero
 def add_cell(x,y, area, age_area, cell_type):
 	new_row = area[x]
 	new_row_age = age_area[x]	
@@ -102,6 +104,8 @@ def add_cell(x,y, area, age_area, cell_type):
 
 
 #death function
+#removes cell if the age is greater than a number randomly generated from the normal distribution
+#each cell type has it's own mean age of death
 def cell_death(x,y, age_area, area):
 	new_row = area[x]
 	cell_type = new_row[y]
@@ -115,6 +119,8 @@ def cell_death(x,y, age_area, area):
 		if random.normalvariate(isc_mean_death,1) < age_area[x][y]:
 			remove_cell(x,y,area)
 
+#will return a random neighbor of input (x,y)
+#the top edge wraps around cells at the side cannot divide out
 def choose_direction(x,y):
 	check = 0
 	while check == 0:
@@ -138,12 +144,20 @@ def choose_direction(x,y):
 			return [0,y]
 			check+=1
 			
-													
-def isc_divide(x,y, age_area, area):
-	if random.normalvariate(isc_mean_divide,2) < age_area[x][y]:
-		direction = choose_direction(x,y)
-		add_cell(direction[0],direction[1], age_area, "eb")
-	
+# divide function will check isc at (x,y) if the randomly generated value of normal distribution is 
+#than time last divided add a new cell 'eb' or 'c_eb' depending on type of isc
+def isc_divide(x,y, isc_div_list, area):
+	if area[x][y] != 'isc' or 'c_isc':
+		return "this is not an isc"
+		break
+	since_last_div = [x[2] for x in isc_div_list if x[0] == x and x[1] == y]
+	direction = choose_direction(x,y)
+	if area[x][y] == 'isc':
+		if random.normalvariate(isc_mean_divide,2) < since_last_div:
+			add_cell(direction[0],direction[1], age_area, "eb")
+	elif area[x][y] == 'c_isc':		
+		if random.normalvariate(isc_mean_divide,2) < since_last_div:	
+			add_cell(direction[0],direction[1], age_area, "c_eb")	
 	
 							
 
