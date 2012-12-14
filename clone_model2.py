@@ -53,7 +53,7 @@ def find_any_cell(area, cell_type):
 	pos_array =np.array(pos)
 	pos_array = np.reshape(pos_array,((len(pos_array)/2),-1))
 	return pos_array
-	
+
 #create clone by removing one isc from non_clone_dict
 #and adding it to clone_dict	
 isc_pos = find_any_cell(area, "isc")
@@ -91,7 +91,7 @@ def remove_cell(x,y, age_area, isc_div_list, area):
 					del isc_div_list[i]
 	else:
 		clone_dict[str(cell_lost)]-=1	
-	
+
 #add cell of cell_type at position (x,y)
 #set the age of that cell to zero
 def add_cell(x,y, area, age_area, cell_type):
@@ -133,7 +133,7 @@ def distance_value(x,y,t_x, t_y):
 			elif i == dist and (x != t_x and y != t_y):
 				return i-2
 
-			
+
 #upd_diffuse function will take a value from a position and add some portion of that value to all squares 
 #will be run each death and be additive, rate of diffusion to be determined 
 
@@ -151,24 +151,26 @@ def create_blank(area):
 #will iterate over area_done marking of searched points and assigning upd levels from point of origin (o_x, o_y)
 #initialize with x = o_x and y = o_y will assign 1/distance^2 value, distance being 8-cell shells 
 def diffuse_from_point(x, y, upd_area, upd_level, cell_type):	
-    if cell_type == 'ec' or cell_type == 'c_ec':
-    	upd = upd_level[0]
-    elif cell_type == 'ee' or cell_type == 'c_ee':
-    	upd = upd_level[1]
-    elif cell_type == 'isc' or cell_type == 'c_isc':
-    	upd = upd_level[2] 
-    upd_area[x][y] = upd
-    for x_axis in range(len(upd_area)):
-    	print x_axis
-    	for y_axis in range(len(upd_area[x_axis])):
-    		print y_axis
-    		if x_axis != x or y_axis != y:
-    			print "value "+ str(upd/distance_value(x_axis, y_axis, x, y)**2)
-    			upd_area[x_axis][y_axis] += upd/distance_value(x_axis, y_axis, x, y)**2
-    			print upd_area
-	return upd_area      
+	if cell_type == 'ec' or cell_type == 'c_ec':
+		upd = upd_level[0]
+	elif cell_type == 'ee' or cell_type == 'c_ee':
+		upd = upd_level[1]
+	elif cell_type == 'isc' or cell_type == 'c_isc':
+		upd = upd_level[2] 
+	new_upd_area = upd_area
+	new_upd_area[x][y] = upd
+	for x_axis, val in enumerate(upd_area):
+		print x_axis, val
+		for y_axis, v in enumerate(val):
+			print "("+str(x_axis)+", "+str(y_axis)+")"
+			if x_axis != x or y_axis != y:
+				print "value "+ str(upd/distance_value(x_axis, y_axis, x, y)**2)
+				new_upd_area[x_axis][y_axis] += upd/distance_value(x_axis, y_axis, x, y)**2
+				print new_upd_area
+	return new_upd_area      
 
-print diffuse_from_point(3,2,up_area,upd_level, area[3][2])
+diffuse_from_point(3, 2, upd_area, upd_level, 'ec')
+
 #death function
 #removes cell if the age is greater than a number randomly generated from the normal distribution
 #each cell type has it's own mean age of death
@@ -220,7 +222,7 @@ def choose_direction(x,y):
 		elif rand_direction == 3 and x != (size-1):
 			return [0,y]
 			check+=1
-			
+
 # divide function will check isc at (x,y) if the randomly generated value of normal distribution is 
 #than time last divided add a new cell 'eb' or 'c_eb' depending on type of isc
 def isc_divide(x,y, isc_div_list, area, upd_area):
@@ -243,12 +245,12 @@ def isc_divide(x,y, isc_div_list, area, upd_area):
 				add_cell(direction[0],direction[1], area, age_area, "c_eb")
 			elif age_to_divide < since_last_div and rand_sym_div <= isc_prob_sym_divide:
 				add_cell(direction[0],direction[1],area, age_area, "c_isc")
-	
-							
+
+
 
 #print row and col enumerated version of area
 def print_enum(area):	
 	for index, item in enumerate(area):
 		print index
 		for i, t in enumerate(item):
-			print i, t    	
+			print i, t   
