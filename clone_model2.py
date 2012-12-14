@@ -122,7 +122,6 @@ def neighbor(x,y,n_x,n_y):
 # returns not actual distance but a value corresponding to how many shells (8-cell rings) away the target position is
 def distance_value(x,y,t_x, t_y):
 	dist = abs(x-t_x)+abs(y-t_y)
-	print dist
 	if dist == 1 or dist == 0:
 		return 1
 	else:	
@@ -152,7 +151,6 @@ def create_blank(area):
 #will iterate over area_done marking of searched points and assigning upd levels from point of origin (o_x, o_y)
 #initialize with x = o_x and y = o_y will assign 1/distance^2 value, distance being 8-cell shells 
 def diffuse_from_point(x, y, upd_area, upd_level, cell_type):	
-    [area_done, num] = create_blank(upd_area)
     if cell_type == 'ec' or cell_type == 'c_ec':
     	upd = upd_level[0]
     elif cell_type == 'ee' or cell_type == 'c_ee':
@@ -160,14 +158,15 @@ def diffuse_from_point(x, y, upd_area, upd_level, cell_type):
     elif cell_type == 'isc' or cell_type == 'c_isc':
     	upd = upd_level[2] 
     upd_area[x][y] = upd
-    area_done[x][y] = 1
-    for a in range(len(upd_area)):
-    	for b in range(len(upd_area[a])):
-    		if area_done[a][b] == 0:
-    			print "value "+ str(upd/distance_value(a, b, x, y)**2)
-				upd_area[a][b] += upd/distance_value(a, b, x, y)**2
-    			area_done[a][b] = 1
-	return upd_area    
+    for x_axis in range(len(upd_area)):
+    	print x_axis
+    	for y_axis in range(len(upd_area[x_axis])):
+    		print y_axis
+    		if x_axis != x or y_axis != y:
+    			print "value "+ str(upd/distance_value(x_axis, y_axis, x, y)**2)
+    			upd_area[x_axis][y_axis] += upd/distance_value(x_axis, y_axis, x, y)**2
+    			print upd_area
+	return upd_area      
 
 print diffuse_from_point(3,2,up_area,upd_level, area[3][2])
 #death function
