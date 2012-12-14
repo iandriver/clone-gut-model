@@ -1,6 +1,9 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import random
+import itertools
+import collections
+
 
 clone_dict = {"c_isc":0, "c_eb":0, "c_ec":0, "c_ee":0}
 non_clone_dict = {"isc":0, "eb":0, "ec":0, "ee":0}
@@ -36,7 +39,7 @@ for d1 in range(size):
 	        	area[d1][d2]= 'isc'	
 	        	non_clone_dict["isc"]+=1
 #seed a map that will keep track of the age of each cell start all at zero for now 
-age_area = [ [ 0 for i in range(size) ] for j in range(size) ]
+age_area = [ [ 10 for i in range(size) ] for j in range(size) ]
 
 #seed a map that will keep track of the level of upd at each cell position zero to start 
 upd_area = [ [ 0 for i in range(size) ] for j in range(size) ]
@@ -54,6 +57,7 @@ def find_any_cell(area, cell_type):
 				count+=1
 		pos_array = zip(*[iter(pos)]*2)
 	return [pos_array, count]
+	
 #create clone by removing one isc from non_clone_dict
 #and adding it to clone_dict	
 [isc_pos, isc_count] = find_any_cell(area, "isc")
@@ -62,7 +66,21 @@ area[isc_pos[choice][0]][isc_pos[choice][1]] = "c_isc"
 non_clone_dict["isc"]-=1
 clone_dict["c_isc"]+=1
 
-#seed a map isc_div_list that keeps track of the last time an isc divided in form [x,y,days since div]
+def is_isc(area, x, y):
+	if area[x][y] == 'isc' or area[x][y] == 'c_isc':
+		return True
+	else:
+		return False
+			
+def flatten(l):
+    for el in l:
+        if isinstance(el, collections.Iterable) and not isinstance(el, basestring):
+            for sub in flatten(el):
+                yield sub
+        else:
+            yield el
+	
+#seed a map isc_div_list that keeps track of the last time an isc divided in form [x,y,days since div]	
 isc_list = []
 for x in range(0,len(isc_pos)):
 	for i in range(0,3):
@@ -70,8 +88,20 @@ for x in range(0,len(isc_pos)):
 			isc_list.append(isc_pos[x][i])
 		else:
 			isc_list.append(3)
-isc_div_list = [isc_list[i:i+3] for i in range(0,len(isc_list),3)]			
+isc_div_list = [isc_list[i:i+3] for i in range(0,len(isc_list),3)]
 
+def isc_list(area):
+	from operator import itemgetter
+	isc_div_dict = {}
+	[isc_pos, isc_count] = find_any_cell(area, "isc")
+	[c_isc_pos, isc_count] = find_any_cell(area, "c_isc")
+	isc_pos.append(c_isc_pos)
+	all_pos = flatten(isc_pos)
+	array_pos = zip(*[iter(all_pos)]*2)
+	array_pos.sort()	
+	return array_pos
+print isc_list(area)
+	
 #remove cell from map, dict and age map
 def remove_cell(x,y, age_area, isc_div_list, area):
 	new_row = area[x]
@@ -83,14 +113,19 @@ def remove_cell(x,y, age_area, isc_div_list, area):
 	del age_area[x]
 	area.insert(x,new_row)
 	age_area.insert(x,new_row_age)
-	if cell_lost == 'isc' or 'ec' or 'ee':
-		non_clone_dict[str(cell_lost)]-=1
+	if cell_lost == 'isc' or cell_lost =='ec' or cell_lost =='ee':
+		non_clone_dict[cell_lost]-=1
 		if cell_lost == 'isc':
-			for i in isc_div_list:
-				if i[0]==x and i[1] ==y:
-					del isc_div_list[i]
+			for index, value in enumerate(isc_div_list):
+				if value[0]==x and value[1] ==y:
+					del isc_div_list[index]
 	else:
-		clone_dict[str(cell_lost)]-=1	
+		clone_dict[cell_lost]-=1	
+		if cell_lost == 'c_isc':
+			for index, value in enumerate(isc_div_list):
+				if value[0]==x and value[1] ==y:
+					del isc_div_list[index]
+
 
 #add cell of cell_type at position (x,y)
 #set the age of that cell to zero
@@ -103,10 +138,10 @@ def add_cell(x,y, area, age_area, cell_type):
 	del age_area[x]	
 	area.insert(x,new_row)
 	age_area.insert(x,new_row_age)		
-	if cell_type == 'c_isc' or 'c_ec' or 'c_ee' or 'c_eb':
-		clone_dict["c_eb"]+=1
+	if cell_type == 'c_eb' or cell_type == 'c_isc':
+		clone_dict[cell_type]+=1
 	else:
-		non_clone_dict["eb"]+=1	
+		non_clone_dict[cell_type]+=1	
 
 #neigbor will return True if the cell is a neighbor of (x,y) Eight cells are neighbors
 def neighbor(x,y,n_x,n_y):
@@ -160,13 +195,13 @@ def diffuse_from_point(x, y, upd_area, upd_level, cell_type):
 	new_upd_area = upd_area
 	new_upd_area[x][y] = upd
 	for x_axis, val in enumerate(upd_area):
-		print x_axis, val
+		#print x_axis, val
 		for y_axis, v in enumerate(val):
-			print "("+str(x_axis)+", "+str(y_axis)+")"
+			#print "("+str(x_axis)+", "+str(y_axis)+")"
 			if x_axis != x or y_axis != y:
-				print "value "+ str(upd/distance_value(x_axis, y_axis, x, y)**2)
+				#print "value "+ str(upd/distance_value(x_axis, y_axis, x, y)**2)
 				new_upd_area[x_axis][y_axis] += upd/distance_value(x_axis, y_axis, x, y)**2
-				print new_upd_area
+				#print new_upd_area
 	return new_upd_area      
 
 
@@ -174,24 +209,24 @@ def diffuse_from_point(x, y, upd_area, upd_level, cell_type):
 #death function
 #removes cell if the age is greater than a number randomly generated from the normal distribution
 #each cell type has it's own mean age of death
-def cell_death(x,y, age_area, upd_area, dpp_area, upd_level, area):		
+def cell_death(x,y, age_area, upd_area, dpp_area, upd_level, area, isc_div_list):		
 	new_row = area[x]
 	cell_type = new_row[y]
 	if cell_type == 'ec' or 'c_ec':
 		if random.normalvariate(ec_mean_death,1) < age_area[x][y]:
-			remove_cell(x,y,area)
+			remove_cell(x,y,area, isc_div_list, area)
 			new_upd_area = diffuse_from_point(x, y, upd_area, upd_level, cell_type)
 		else:
 			new_upd_area = upd_area
 	elif cell_type == 'ee' or 'c_ee':
 		if random.normalvariate(ee_mean_death,1) < age_area[x][y]:
-			remove_cell(x,y,area)
+			remove_cell(x,y,area, isc_div_list, area)
 			diffuse_from_point(x, y, upd_area, upd_level, cell_type)
 		else:
 			new_upd_area = upd_area	
 	elif cell_type == 'isc' or 'c_isc':
 		if random.normalvariate(isc_mean_death,1) < age_area[x][y]:
-			remove_cell(x,y,area)
+			remove_cell(x,y,area, isc_div_list, area)
 			diffuse_from_point(x, y, upd_area, upd_level, cell_type)
 		else:
 			new_upd_area = upd_area
@@ -199,8 +234,7 @@ def cell_death(x,y, age_area, upd_area, dpp_area, upd_level, area):
 		new_upd_area = upd_area
 	return new_upd_area
 	
-cell_death(3,2, age_area, upd_area, dpp_area, upd_level, area)
-print area
+upd_area = cell_death(3,2, age_area, upd_area, dpp_area, upd_level, area, isc_div_list)
 #will return a random neighbor of input (x,y)
 #the top edge wraps around cells at the side cannot divide out
 def choose_direction(x,y):
@@ -228,9 +262,11 @@ def choose_direction(x,y):
 
 # divide function will check isc at (x,y) if the randomly generated value of normal distribution is 
 #than time last divided add a new cell 'eb' or 'c_eb' depending on type of isc
-def isc_divide(x,y, isc_div_list, area, upd_area):
+def isc_divide(x,y, isc_div_list, area, upd_area, upd_level,isc_prob_sym_divide):
 	rand_sym_div = random.random()
-	age_to_divide = random.normalvariate(isc_mean_divide,2)
+	print rand_sym_div
+	age_to_divide = random.normalvariate(isc_mean_divide,0.5)
+	print "age to divide ("+str(x)+", "+str(y)+") = "+str(age_to_divide)
 	if area[x][y] != 'isc' and area[x][y] != 'c_isc':
 		print "this is not an isc"
 	else:
@@ -238,18 +274,30 @@ def isc_divide(x,y, isc_div_list, area, upd_area):
 			if i[0] == x and i[1] == y:
 				since_last_div = i[2]
 		direction = choose_direction(x,y)
-		if area[x][y] == 'isc':
+		if area[x][y] == 'isc' and upd_area[x][y] >= random.normalvariate(upd_level[0]/4,8):
+			print "dividing"
 			if age_to_divide < since_last_div and rand_sym_div >= isc_prob_sym_divide:
 				add_cell(direction[0],direction[1],area, age_area, "eb")
 			elif age_to_divide < since_last_div and rand_sym_div <= isc_prob_sym_divide:
 				add_cell(direction[0],direction[1],area, age_area, "isc")
-		elif area[x][y] == 'c_isc':		
+		elif area[x][y] == 'c_isc' and upd_area[x][y] >= random.normalvariate(upd_level[0],8):	
+			print "dividing"	
 			if age_to_divide < since_last_div and rand_sym_div >= isc_prob_sym_divide:	
 				add_cell(direction[0],direction[1], area, age_area, "c_eb")
 			elif age_to_divide < since_last_div and rand_sym_div <= isc_prob_sym_divide:
 				add_cell(direction[0],direction[1],area, age_area, "c_isc")
+[isc_pos, isc_count] = find_any_cell(area, "isc")
+'''print isc_pos
+print clone_dict
+print non_clone_dict
 
-
+print area
+print upd_area
+for iscs in isc_pos:
+	isc_divide(iscs[0],iscs[1], isc_div_list, area, upd_area, upd_level, isc_prob_sym_divide)
+print area	
+print clone_dict
+print non_clone_dict'''
 
 #print row and col enumerated version of area
 def print_enum(area):	
