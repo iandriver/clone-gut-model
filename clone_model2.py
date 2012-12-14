@@ -169,35 +169,38 @@ def diffuse_from_point(x, y, upd_area, upd_level, cell_type):
 				print new_upd_area
 	return new_upd_area      
 
-diffuse_from_point(3, 2, upd_area, upd_level, 'ec')
+
 
 #death function
 #removes cell if the age is greater than a number randomly generated from the normal distribution
 #each cell type has it's own mean age of death
-def cell_death(x,y, age_area, upd_area, dpp_area, upd_level, area):
-	[area_done,  num] = create_blank(upd_area)		
+def cell_death(x,y, age_area, upd_area, dpp_area, upd_level, area):		
 	new_row = area[x]
 	cell_type = new_row[y]
 	if cell_type == 'ec' or 'c_ec':
 		if random.normalvariate(ec_mean_death,1) < age_area[x][y]:
 			remove_cell(x,y,area)
-			new_upd_area = diffuse_from_point(x, y, upd_area, upd_level, area_done, cell_type)
+			new_upd_area = diffuse_from_point(x, y, upd_area, upd_level, cell_type)
 		else:
 			new_upd_area = upd_area
 	elif cell_type == 'ee' or 'c_ee':
 		if random.normalvariate(ee_mean_death,1) < age_area[x][y]:
 			remove_cell(x,y,area)
-			diffuse_from_point(x, y, upd_area, upd_level, area_done, cell_type)
+			diffuse_from_point(x, y, upd_area, upd_level, cell_type)
 		else:
 			new_upd_area = upd_area	
 	elif cell_type == 'isc' or 'c_isc':
 		if random.normalvariate(isc_mean_death,1) < age_area[x][y]:
 			remove_cell(x,y,area)
-			diffuse_from_point(x, y, upd_area, upd_level, area_done, cell_type)
+			diffuse_from_point(x, y, upd_area, upd_level, cell_type)
 		else:
 			new_upd_area = upd_area
 	else:
 		new_upd_area = upd_area
+	return new_upd_area
+	
+cell_death(3,2, age_area, upd_area, dpp_area, upd_level, area)
+print area
 #will return a random neighbor of input (x,y)
 #the top edge wraps around cells at the side cannot divide out
 def choose_direction(x,y):
