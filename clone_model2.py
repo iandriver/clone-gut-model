@@ -46,19 +46,19 @@ dpp_area = [ [ 0 for i in range(size) ] for j in range(size) ]
 # find any cell will return an list of [x y] positions for the cell_type searched
 def find_any_cell(area, cell_type):
 	pos = []
+	count = 0
 	for index, item in enumerate(area):
 		for val, c in enumerate(item):
 			if c == cell_type:
 				pos += [index, val]
-	pos_array =np.array(pos)
-	pos_array = np.reshape(pos_array,((len(pos_array)/2),-1))
-	return pos_array
-
+				count+=1
+		pos_array = zip(*[iter(pos)]*2)
+	return [pos_array, count]
 #create clone by removing one isc from non_clone_dict
 #and adding it to clone_dict	
-isc_pos = find_any_cell(area, "isc")
-choice = random.randint(0,len(isc_pos)-1)
-area[isc_pos[choice,0]][isc_pos[choice,1]] = "c_isc"
+[isc_pos, isc_count] = find_any_cell(area, "isc")
+choice = random.randint(0,isc_count-1)
+area[isc_pos[choice][0]][isc_pos[choice][1]] = "c_isc"
 non_clone_dict["isc"]-=1
 clone_dict["c_isc"]+=1
 
