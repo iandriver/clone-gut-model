@@ -15,7 +15,8 @@ ee_mean_death = 10
 isc_mean_death = 20
 isc_mean_divide = 2
 isc_prob_sym_divide =0.02
-upd_level =100
+upd_level =[100, 80, 60] #[ec, ee, isc]
+
 
 #create 2D area of cells with dimensions sizeXsize
 #seed each position with a cell identity at the ratio specified
@@ -57,7 +58,7 @@ def find_any_cell(area, cell_type):
 #and adding it to clone_dict	
 isc_pos = find_any_cell(area, "isc")
 choice = random.randint(0,len(isc_pos)-1)
-area[isc_pos[choice,0],isc_pos[choice,1]] = "c_isc"
+area[isc_pos[choice,0]][isc_pos[choice,1]] = "c_isc"
 non_clone_dict["isc"]-=1
 clone_dict["c_isc"]+=1
 
@@ -84,7 +85,7 @@ def remove_cell(x,y, age_area, isc_div_list, area):
 	age_area.insert(x,new_row_age)
 	if cell_lost == 'isc' or 'ec' or 'ee':
 		non_clone_dict[str(cell_lost)]-=1
-		if cell_lost == 'isc'
+		if cell_lost == 'isc':
 			for i in isc_div_list:
 				if i[0]==x and i[1] ==y:
 					del isc_div_list[i]
@@ -105,7 +106,7 @@ def add_cell(x,y, area, age_area, cell_type):
 	if cell_type == 'c_isc' or 'c_ec' or 'c_ee' or 'c_eb':
 		clone_dict["c_eb"]+=1
 	else:
-		non_clone_dict[str"eb"]+=1	
+		non_clone_dict["eb"]+=1	
 
 #neigbor will return True if the cell is a neighbor of (x,y) Eight cells are neighbors
 def neighbor(x,y,n_x,n_y):
@@ -138,47 +139,64 @@ def distance_value(x,y,t_x, t_y):
 #will be run each death and be additive, rate of diffusion to be determined 
 
 
-#create an array of all zeros for each cell to use for search
-area_done = [ [ 0 for i in range(len(upd_area)) ] for j in range(len(upd_area[i])) ]	
+#create an array of same diminsions with all zeros return array and number of elements
+def create_blank(area):
+	count = 0
+	blank_area = area
+	for x in range(len(area)):
+		for y in range(len(area[x])):
+			blank_area[x][y] = 0
+			count+=1
+	return [blank_area, count]		
 
 #will iterate over area_done marking of searched points and assigning upd levels from point of origin (o_x, o_y)
 #initialize with x = o_x and y = o_y will assign 1/distance^2 value, distance being 8-cell shells 
-def diffuse_from_point(x, y, o_x, o_y, upd_area, upd_level, area_done):	
-    if area_done[x][y] == 0:
-		upd_area[x][y] = upd_level/distance(o_x, o_y, x, y)**2
-    elif area_done[x][y] == 1:
-		return False
-    # mark as visited
+def diffuse_from_point(x, y, upd_area, upd_level, cell_type):	
+    [area_done, num] = create_blank(upd_area)
+    if cell_type == 'ec' or cell_type == 'c_ec':
+    	upd = upd_level[0]
+    elif cell_type == 'ee' or cell_type == 'c_ee':
+    	upd = upd_level[1]
+    elif cell_type == 'isc' or cell_type == 'c_isc':
+    	upd = upd_level[2] 
+    upd_area[x][y] = upd
     area_done[x][y] = 1
+    for a in range(len(upd_area)):
+    	for b in range(len(upd_area[a])):
+    		if area_done[a][b] == 0:
+    			print "value "+ str(upd/distance_value(a, b, x, y)**2)
+				upd_area[a][b] += upd/distance_value(a, b, x, y)**2
+    			area_done[a][b] = 1
+	return upd_area    
 
-    # explore neighbors clockwise starting by the one on the right
-    if ((x < len(area_done)-1 and diffuse_from_point(x+1, y,o_x, o_y, upd_area, upd_level, area_done))
-        or (y > 0 and diffuse_from_point(x, y-1,o_x, o_y, upd_area, upd_level, area_done))
-        or (x > 0 and diffuse_from_point(x-1, y,o_x, o_y, upd_area, upd_level, area_done))
-        or (y < len(area_done)-1 and diffuse_from_point(x, y+1,o_x, o_y, upd_area, upd_level, area_done))):
-        return True
-    return False
-    
-
-
+print diffuse_from_point(3,2,up_area,upd_level, area[3][2])
 #death function
 #removes cell if the age is greater than a number randomly generated from the normal distribution
 #each cell type has it's own mean age of death
-def cell_death(x,y, age_area, upd_area, dpp_area, area):
-
-			
+def cell_death(x,y, age_area, upd_area, dpp_area, upd_level, area):
+	[area_done,  num] = create_blank(upd_area)		
 	new_row = area[x]
 	cell_type = new_row[y]
 	if cell_type == 'ec' or 'c_ec':
 		if random.normalvariate(ec_mean_death,1) < age_area[x][y]:
 			remove_cell(x,y,area)
+			new_upd_area = diffuse_from_point(x, y, upd_area, upd_level, area_done, cell_type)
+		else:
+			new_upd_area = upd_area
 	elif cell_type == 'ee' or 'c_ee':
 		if random.normalvariate(ee_mean_death,1) < age_area[x][y]:
-			remove_cell(x,y,area)			
+			remove_cell(x,y,area)
+			diffuse_from_point(x, y, upd_area, upd_level, area_done, cell_type)
+		else:
+			new_upd_area = upd_area	
 	elif cell_type == 'isc' or 'c_isc':
 		if random.normalvariate(isc_mean_death,1) < age_area[x][y]:
 			remove_cell(x,y,area)
-
+			diffuse_from_point(x, y, upd_area, upd_level, area_done, cell_type)
+		else:
+			new_upd_area = upd_area
+	else:
+		new_upd_area = upd_area
 #will return a random neighbor of input (x,y)
 #the top edge wraps around cells at the side cannot divide out
 def choose_direction(x,y):
@@ -206,7 +224,7 @@ def choose_direction(x,y):
 			
 # divide function will check isc at (x,y) if the randomly generated value of normal distribution is 
 #than time last divided add a new cell 'eb' or 'c_eb' depending on type of isc
-def isc_divide(x,y, isc_div_list, area):
+def isc_divide(x,y, isc_div_list, area, upd_area):
 	rand_sym_div = random.random()
 	age_to_divide = random.normalvariate(isc_mean_divide,2)
 	if area[x][y] != 'isc' and area[x][y] != 'c_isc':
@@ -219,12 +237,12 @@ def isc_divide(x,y, isc_div_list, area):
 		if area[x][y] == 'isc':
 			if age_to_divide < since_last_div and rand_sym_div >= isc_prob_sym_divide:
 				add_cell(direction[0],direction[1],area, age_area, "eb")
-			elif age_to_divide < since_last_div and rand_sym_div <= isc_prob_sym_divide
+			elif age_to_divide < since_last_div and rand_sym_div <= isc_prob_sym_divide:
 				add_cell(direction[0],direction[1],area, age_area, "isc")
 		elif area[x][y] == 'c_isc':		
 			if age_to_divide < since_last_div and rand_sym_div >= isc_prob_sym_divide:	
 				add_cell(direction[0],direction[1], area, age_area, "c_eb")
-			elif age_to_divide < since_last_div and rand_sym_div <= isc_prob_sym_divide
+			elif age_to_divide < since_last_div and rand_sym_div <= isc_prob_sym_divide:
 				add_cell(direction[0],direction[1],area, age_area, "c_isc")
 	
 							
@@ -235,21 +253,3 @@ def print_enum(area):
 		print index
 		for i, t in enumerate(item):
 			print i, t    	
-	
-
-	
-for i in area:
-	for j in i:
-		if 	
-for i in range(total):
-	for div in range(0, 
-	
-
-		
-
-# evenly sampled time at 200ms intervals
-t = np.arange(0., 5., 0.2)
-
-# red dashes, blue squares and green triangles
-plt.plot(t, t, 'r--', t, t**2, 'bs', t, t**3, 'g^')
-plt.show()
