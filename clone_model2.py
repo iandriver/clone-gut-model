@@ -96,6 +96,7 @@ for cell in range(len(isc_div_list)):
 	isc_div_list[cell] = isc_div_list[cell] + (0,)
 print isc_div_list
 
+#to be called whenever cells move, will take new (x,y) and update isc_div_list if affected
 def new_div_list(x,y, area,isc_div_list)
 		for cells in isc_div_list:
 			if cells[0] == x:
