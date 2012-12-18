@@ -80,27 +80,28 @@ def flatten(l):
         else:
             yield el
 	
-#seed a map isc_div_list that keeps track of the last time an isc divided in form [x,y,days since div]	
-isc_list = []
-for x in range(0,len(isc_pos)):
-	for i in range(0,3):
-		if i < 2:
-			isc_list.append(isc_pos[x][i])
-		else:
-			isc_list.append(3)
-isc_div_list = [isc_list[i:i+3] for i in range(0,len(isc_list),3)]
-
+# isc_list will return tuples of positions of all iscs
 def isc_list(area):
-	from operator import itemgetter
-	isc_div_dict = {}
 	[isc_pos, isc_count] = find_any_cell(area, "isc")
 	[c_isc_pos, isc_count] = find_any_cell(area, "c_isc")
 	isc_pos.append(c_isc_pos)
 	all_pos = flatten(isc_pos)
 	array_pos = zip(*[iter(all_pos)]*2)
 	array_pos.sort()	
-	return array_pos
-print isc_list(area)
+	return array_pos	
+	
+#seed a map isc_div_list that keeps track of the last time an isc divided in form [x,y,days since div]		
+isc_div_list = isc_list(area)
+for cell in range(len(isc_div_list)):
+	isc_div_list[cell] = isc_div_list[cell] + (0,)
+print isc_div_list
+
+def new_div_list(x,y, area,isc_div_list)
+		for cells in isc_div_list:
+			if cells[0] == x:
+				if cells[1] > y:
+					old_y = cells[1]
+					new_y = cells[1] -1
 	
 #remove cell from map, dict and age map
 def remove_cell(x,y, age_area, isc_div_list, area):
