@@ -97,12 +97,18 @@ for cell in range(len(isc_div_list)):
 print isc_div_list
 
 #to be called whenever cells move, will take new (x,y) and update isc_div_list if affected
-def new_div_list(x,y, area,isc_div_list)
-		for cells in isc_div_list:
+#for updating the div_list when a cell is removed
+#check if removed cell is in same row, if in column before isc then update with new column
+#returns new isc_div_list 
+def new_div_list(x,y,isc_div_list):
+		for place, cells in enumerate(isc_div_list):
 			if cells[0] == x:
 				if cells[1] > y:
-					old_y = cells[1]
 					new_y = cells[1] -1
+					isc_div_list.remove((cells[0], cells[1],cells[2]))
+					isc_div_list.append((cells[0], new_y,cells[2]))
+					isc_div_list.sort()
+		return isc_div_list	
 	
 #remove cell from map, dict and age map
 def remove_cell(x,y, age_area, isc_div_list, area):
