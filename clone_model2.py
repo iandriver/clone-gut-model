@@ -9,7 +9,8 @@ clone_dict = {"c_isc":0, "c_eb":0, "c_ec":0, "c_ee":0}
 non_clone_dict = {"isc":0, "eb":0, "ec":0, "ee":0}
 
 total =20
-size = 10
+size_row = 10
+size_col = 10
 fraction_isc = .05
 fraction_ee = .1
 fraction_ec = .85
@@ -25,9 +26,9 @@ upd_level =[100, 80, 60] #[ec, ee, isc]
 #seed each position with a cell identity at the ratio specified
 #and add that cell to the non_clone_dict
 #no isc's can be created on edges
-area= [ [ 0 for i in range(size) ] for j in range(size) ]
-for d1 in range(size):
-	for d2 in range(size):
+area= [ [ 0 for i in range(size_row) ] for j in range(size_col) ]
+for d1 in range(size_row):
+	for d2 in range(size_col):
 		prob = random.random()
 	    	if prob <= fraction_ec:
 	        	area[d1][d2]= 'ec'
@@ -39,12 +40,12 @@ for d1 in range(size):
 	        	area[d1][d2]= 'isc'	
 	        	non_clone_dict["isc"]+=1
 #seed a map that will keep track of the age of each cell start all at zero for now 
-age_area = [ [ 10 for i in range(size) ] for j in range(size) ]
+age_area = [ [ 10 for i in range(size_row) ] for j in range(size_col) ]
 
 #seed a map that will keep track of the level of upd at each cell position zero to start 
-upd_area = [ [ 0 for i in range(size) ] for j in range(size) ]
+upd_area = [ [ 0 for i in range(size_row) ] for j in range(size_col) ]
 #seed a map that will keep track of the level of dpp at each cell position zero to start 
-dpp_area = [ [ 0 for i in range(size) ] for j in range(size) ]
+dpp_area = [ [ 0 for i in range(size_row) ] for j in range(size_col) ]
        	
 # find any cell will return an list of [x y] positions for the cell_type searched
 def find_any_cell(area, cell_type):
