@@ -36,11 +36,11 @@ for d1 in range(size_row):
 	        elif prob>fraction_ec and prob<=(fraction_ec+fraction_ee):
 	        	area[d1][d2]= 'ee'
 	        	non_clone_dict["ee"]+=1
-	        elif d1 != 0 or d1 != size-1 or d2 !=0 or d2!= size-1:
+	        elif d1 != 0 or d1 != size_row-1 or d2 !=0 or d2!= size_col-1:
 	        	area[d1][d2]= 'isc'	
 	        	non_clone_dict["isc"]+=1
 #seed a map that will keep track of the age of each cell start all at zero for now 
-age_area = [ [ 10 for i in range(size_row) ] for j in range(size_col) ]
+age_area = [ [ 0 for i in range(size_row) ] for j in range(size_col) ]
 
 #seed a map that will keep track of the level of upd at each cell position zero to start 
 upd_area = [ [ 0 for i in range(size_row) ] for j in range(size_col) ]
@@ -58,7 +58,7 @@ def find_any_cell(area, cell_type):
 				count+=1
 		pos_array = zip(*[iter(pos)]*2)
 	return [pos_array, count]
-	
+
 #create clone by removing one isc from non_clone_dict
 #and adding it to clone_dict	
 [isc_pos, isc_count] = find_any_cell(area, "isc")
@@ -67,12 +67,14 @@ area[isc_pos[choice][0]][isc_pos[choice][1]] = "c_isc"
 non_clone_dict["isc"]-=1
 clone_dict["c_isc"]+=1
 
+
+
 def is_isc(area, x, y):
 	if area[x][y] == 'isc' or area[x][y] == 'c_isc':
 		return True
 	else:
 		return False
-			
+
 def flatten(l):
     for el in l:
         if isinstance(el, collections.Iterable) and not isinstance(el, basestring):
@@ -80,7 +82,7 @@ def flatten(l):
                 yield sub
         else:
             yield el
-	
+
 # isc_list will return tuples of positions of all iscs
 def isc_list(area):
 	[isc_pos, isc_count] = find_any_cell(area, "isc")
@@ -90,27 +92,33 @@ def isc_list(area):
 	array_pos = zip(*[iter(all_pos)]*2)
 	array_pos.sort()	
 	return array_pos	
-	
+
 #seed a map isc_div_list that keeps track of the last time an isc divided in form [x,y,days since div]		
 isc_div_list = isc_list(area)
 for cell in range(len(isc_div_list)):
 	isc_div_list[cell] = isc_div_list[cell] + (0,)
-print isc_div_list
+
 
 #to be called whenever cells move, will take new (x,y) and update isc_div_list if affected
 #for updating the div_list when a cell is removed
 #check if removed cell is in same row, if in column before isc then update with new column
 #returns new isc_div_list 
-def new_div_list(x,y,isc_div_list):
+def new_div_list(x,y,isc_div_list, add_or_remove):
 		for place, cells in enumerate(isc_div_list):
-			if cells[0] == x:
+			if add_or_remove == "remove" and cells[0] == x:
 				if cells[1] > y:
 					new_y = cells[1] -1
 					isc_div_list.remove((cells[0], cells[1],cells[2]))
 					isc_div_list.append((cells[0], new_y,cells[2]))
 					isc_div_list.sort()
+			elif add_or_remove == "add" and cells[0] == x:
+				if cells[1] > y:
+					new_y = cells[1] +1
+					isc_div_list.remove((cells[0], cells[1],cells[2]))
+					isc_div_list.append((cells[0], new_y,cells[2]))
+					isc_div_list.sort()							
 		return isc_div_list	
-	
+
 #remove cell from map, dict and age map
 def remove_cell(x,y, age_area, isc_div_list, area):
 	new_row = area[x]
@@ -128,17 +136,22 @@ def remove_cell(x,y, age_area, isc_div_list, area):
 			for index, value in enumerate(isc_div_list):
 				if value[0]==x and value[1] ==y:
 					del isc_div_list[index]
+		else:
+			new_isc_div_list = new_div_list(x, y, isc_div_list, "remove")				
 	else:
 		clone_dict[cell_lost]-=1	
 		if cell_lost == 'c_isc':
 			for index, value in enumerate(isc_div_list):
 				if value[0]==x and value[1] ==y:
 					del isc_div_list[index]
+		else:
+			new_isc_div_list = new_div_list(x, y, isc_div_list, "remove")	
+	isc_div_list = new_isc_div_list
 
-
+			
 #add cell of cell_type at position (x,y)
 #set the age of that cell to zero
-def add_cell(x,y, area, age_area, cell_type):
+def add_cell(x,y, area, age_area, cell_type, isc_div_list):
 	new_row = area[x]
 	new_row_age = age_area[x]	
 	new_row.insert(y,cell_type)
@@ -146,11 +159,14 @@ def add_cell(x,y, area, age_area, cell_type):
 	del area[x]
 	del age_area[x]	
 	area.insert(x,new_row)
-	age_area.insert(x,new_row_age)		
+	age_area.insert(x,new_row_age)
+	new_isc_div_list = new_div_list(x, y, isc_div_list, "add")		
 	if cell_type == 'c_eb' or cell_type == 'c_isc':
 		clone_dict[cell_type]+=1
 	else:
 		non_clone_dict[cell_type]+=1	
+	isc_div_list = new_isc_div_list
+	
 
 #neigbor will return True if the cell is a neighbor of (x,y) Eight cells are neighbors
 def neighbor(x,y,n_x,n_y):
@@ -242,8 +258,7 @@ def cell_death(x,y, age_area, upd_area, dpp_area, upd_level, area, isc_div_list)
 	else:
 		new_upd_area = upd_area
 	return new_upd_area
-	
-upd_area = cell_death(3,2, age_area, upd_area, dpp_area, upd_level, area, isc_div_list)
+
 #will return a random neighbor of input (x,y)
 #the top edge wraps around cells at the side cannot divide out
 def choose_direction(x,y):
@@ -279,38 +294,38 @@ def isc_divide(x,y, isc_div_list, area, upd_area, upd_level,isc_prob_sym_divide)
 	if area[x][y] != 'isc' and area[x][y] != 'c_isc':
 		print "this is not an isc"
 	else:
-		for i in isc_div_list:
+		for pos, i in enumerate(isc_div_list):
 			if i[0] == x and i[1] == y:
 				since_last_div = i[2]
+				isc_num = pos
 		direction = choose_direction(x,y)
 		if area[x][y] == 'isc' and upd_area[x][y] >= random.normalvariate(upd_level[0]/4,8):
 			print "dividing"
 			if age_to_divide < since_last_div and rand_sym_div >= isc_prob_sym_divide:
 				add_cell(direction[0],direction[1],area, age_area, "eb")
+				isc_div_list[isc_num][2] = 0	
 			elif age_to_divide < since_last_div and rand_sym_div <= isc_prob_sym_divide:
 				add_cell(direction[0],direction[1],area, age_area, "isc")
+				isc_div_list[isc_num][2] = 0
 		elif area[x][y] == 'c_isc' and upd_area[x][y] >= random.normalvariate(upd_level[0],8):	
 			print "dividing"	
 			if age_to_divide < since_last_div and rand_sym_div >= isc_prob_sym_divide:	
 				add_cell(direction[0],direction[1], area, age_area, "c_eb")
+				isc_div_list[isc_num][2] = 0
 			elif age_to_divide < since_last_div and rand_sym_div <= isc_prob_sym_divide:
 				add_cell(direction[0],direction[1],area, age_area, "c_isc")
-[isc_pos, isc_count] = find_any_cell(area, "isc")
-'''print isc_pos
-print clone_dict
-print non_clone_dict
+				isc_div_list[isc_num][2] = 0
 
-print area
-print upd_area
-for iscs in isc_pos:
-	isc_divide(iscs[0],iscs[1], isc_div_list, area, upd_area, upd_level, isc_prob_sym_divide)
-print area	
-print clone_dict
-print non_clone_dict'''
+days =10
+
+for t in range(days):
+	for r in area:
+		for c in r:
+				
 
 #print row and col enumerated version of area
 def print_enum(area):	
 	for index, item in enumerate(area):
 		print index
 		for i, t in enumerate(item):
-			print i, t   
+			print i, t
